@@ -1,27 +1,42 @@
 package com.uce.edu.demo.security;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 public class WebSecurity {
-	
 	@Autowired
 	private UserDetailsService userDetailsService;
-
+	
 	@Autowired
 	private AuthEntryPointJWT unauthorizedHandler;
-
+	
 	@Bean
-	public SecurityFilterChain filterChain(HttpSecurity http) throw Exception{
-
-		http.cors().and().csrf().disable().exceptionHandling().authenticationEntryPoint(unauthorizedHandler).and()
-				.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.STATELESS).and().authorizeRequests()
-				.antMatchers("/API/v1/Autorizacion/tokens/obtener/**").permiteAll().anyRequest().authenticated();
+	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+		http.cors().and().csrf().disable()
+		.exceptionHandling()
+		.authenticationEntryPoint(unauthorizedHandler)
+		.and().sessionManagement()
+		.sessionCreationPolicy(SessionCreationPolicy.STATELESS) //Como se va a manejar la sesion, se mantiene mientras se consulte el API
+		.and()
+		.authorizeRequests()
+		.antMatchers("/tokens/obtener/**")
+		.permitAll()
+		.anyRequest()
+		.authenticated();
 		
 		http.authenticationProvider(this.authenticationProvider());
+		
 		return http.build();
 	}
 	
@@ -30,16 +45,17 @@ public class WebSecurity {
 		DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
 		authProvider.setUserDetailsService(userDetailsService);
 		authProvider.setPasswordEncoder(this.passwordEncoder());
+		
 		return authProvider;
 	}
 	
 	@Bean
-	public PasswordEndoder passwordEncoder() {
-		return new BCryptPasswordEncoder();
+	public AuthenticationManager authenticationManager (AuthenticationConfiguration authConfig) throws Exception {
+		return authConfig.getAuthenticationManager();
 	}
 	
 	@Bean
-	public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) {
-		return authConfig.getAuthenticationManager();
+	public PasswordEncoder passwordEncoder() {
+		return new BCryptPasswordEncoder();
 	}
 }
